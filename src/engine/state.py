@@ -8,8 +8,8 @@ BOARD_SIZE = 9  # 9x9 board
 WALL_SLOTS = BOARD_SIZE - 1  # 8x8 slots
 WALLS_PER_PLAYER = 10
 
-# P0 starts at the top and races to the bottom row
-# P1 does the reverse
+# player0 starts at the top and races to the bottom row
+# player1 does the reverse
 STARTS = ((0, 4), (8, 4))
 GOAL_ROWS = (8, 0)
 
