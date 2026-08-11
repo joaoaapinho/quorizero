@@ -1,8 +1,8 @@
-"""Play agents against each other; CLI runs the Step 2 sanity checks.
+"""Play agents against each other; CLI runs Step 2 sanity checks.
 
 python -m baseline.match                 # both sanity checks (tally only)
 python -m baseline.match --games 20 --depth 2
-python -m baseline.match --view          # watch ONE bot game unfold, move by move
+python -m baseline.match --view          # ONE bot game, move by move
 """
 
 from __future__ import annotations
@@ -41,7 +41,6 @@ def play_game(
     delay: float = 0.0,
 ) -> int | None:
     """Play one game; return the winning player (0/1) or None if move cap hit.
-
     With view=True, print the board and the move played after every ply.
     """
     state = initial_state()
@@ -52,7 +51,7 @@ def play_game(
         player = state.to_move
         action = agents[player](state)
         if view:
-            print(f"\nply {ply + 1} — player {player}: {_describe(state, action)}")
+            print(f"\nply {ply + 1} - player {player}: {_describe(state, action)}")
         state, done, win = step(state, action)
         if view:
             print(render(state))
@@ -104,7 +103,7 @@ def main() -> None:
         return
 
     bvb_games = max(2, args.games // 5)  # slow at depth 2; only a crash check
-    print(f"baseline vs baseline ({bvb_games} games — sane, non-crashing, decisive):")
+    print(f"baseline vs baseline ({bvb_games} games - sane, non-crashing, decisive):")
     b_wins, w_wins, draws = _series(
         baseline_agent(args.depth), baseline_agent(args.depth), bvb_games
     )

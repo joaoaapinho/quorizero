@@ -8,7 +8,7 @@ from engine.state import DIRS, GameState, Wall, on_board
 def edge_blocked(walls: frozenset[Wall], r: int, c: int, nr: int, nc: int) -> bool:
     """True if a wall blocks the step between orthogonally adjacent cells.
 
-    Out-of-range wall anchors are absent from `walls`, so membership
+    Out-of-range wall anchors are absent from 'walls', so membership
     tests handle board edges without extra bounds checks.
     """
     if nr == r - 1:  # up: wall in the groove below row r-1

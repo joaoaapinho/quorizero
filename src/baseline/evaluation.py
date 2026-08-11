@@ -1,4 +1,4 @@
-"""Heuristic position evaluation: opponent's path length minus your own."""
+"""Heuristic position evaluation: opponent's path length minus ours."""
 
 from __future__ import annotations
 
@@ -9,10 +9,9 @@ WIN_SCORE = 10_000  # magnitude for a decided game; dwarfs any distance diff
 
 
 def evaluate(state: GameState, player: int) -> int:
-    """Score the position from `player`'s view; higher is better.
-
-    The classic Quoridor heuristic: you want a short path to your goal and a
-    long one for your opponent, so score = opp_distance - my_distance.
+    """Score the position from a player's view; higher is better.
+    Quoridor heuristic: we want a short path to our goal and a
+    long one for our opponent, so score = opp_distance - my_distance.
     """
     won = winner(state)
     if won is not None:

@@ -1,15 +1,15 @@
 """Minimal text-board CLI to play Quoridor against the engine.
 
 Run:
-    python -m engine.play            # hotseat: two humans
-    python -m engine.play --random   # you are player 0, opponent plays randomly
+    python -m engine.play # person vs person
+    python -m engine.play --random # player, opponent plays randomly
 
-Commands each turn:
-    r c        move your pawn to cell (row col), e.g.  1 4
-    h r c      place a Horizontal wall at anchor (r c), 0..7
-    v r c      place a Vertical wall at anchor (r c),   0..7
-    moves      list your legal pawn destinations
-    q          quit
+Commands:
+    r c - move our pawn to cell (row col), e.g.  1 4
+    h r c - place a Horizontal wall at anchor (r c), 0..7
+    v r c - place a Vertical wall at anchor (r c),   0..7
+    moves - list our legal pawn destinations
+    q - quit
 """
 
 from __future__ import annotations
@@ -92,7 +92,7 @@ def main() -> None:
 
         action = parse(raw, state)
         if action is None or action not in set(legal_actions(state)):
-            print("illegal — try again ('moves' lists pawn options)")
+            print("illegal - try again ('moves' lists pawn options)")
             continue
 
         state, done, win = step(state, action)

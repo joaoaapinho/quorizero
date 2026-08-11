@@ -1,7 +1,7 @@
 """Fixed integer action space + the core step / legal-action API.
 
 Layout (ACTION_SIZE = 140):
-  0..11    pawn moves, encoded by relative offset (see PAWN_OFFSETS)
+  0..11    pawn moves, encoded by relative offset (on PAWN_OFFSETS)
   12..75   horizontal walls, index 12 + r*8 + c
   76..139  vertical walls,   index 76 + r*8 + c
 """

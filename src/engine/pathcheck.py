@@ -1,7 +1,4 @@
-"""Wall-legality guard: every player must always retain a path to their goal row.
-
-Isolated on purpose — this is the trickiest correctness piece in the engine.
-"""
+"""Wall-legality guard: every player must always retain a path to their goal row."""
 
 from __future__ import annotations
 
@@ -15,8 +12,7 @@ def shortest_distance(
     walls: frozenset[Wall], start: tuple[int, int], goal_row: int
 ) -> int | None:
     """Fewest steps from start to any cell in goal_row, or None if unreachable.
-
-    Ignores opponent pawns, same as has_path — used by the heuristic evaluation.
+    Ignores opponent pawns, same as has_path - used by the heuristic evaluation.
     """
     seen = {start}
     queue = deque([(start, 0)])
@@ -38,7 +34,6 @@ def shortest_distance(
 
 def has_path(walls: frozenset[Wall], start: tuple[int, int], goal_row: int) -> bool:
     """BFS from start to any cell in goal_row, respecting wall blocks.
-
     Opponent pawns are ignored: they move and can be jumped, so they never
     permanently block a path.
     """
@@ -61,7 +56,7 @@ def has_path(walls: frozenset[Wall], start: tuple[int, int], goal_row: int) -> b
 
 
 def wall_keeps_paths(state: GameState, wall: Wall) -> bool:
-    """True if placing `wall` still leaves both players a route to their goal."""
+    """True if placing 'wall' still leaves both players a route to their goal."""
     from engine.state import GOAL_ROWS
 
     walls = state.walls | {wall}
