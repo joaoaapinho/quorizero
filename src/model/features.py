@@ -1,7 +1,7 @@
 """State -> stacked-planes encoding: the tensor the network actually sees.
 
 The board is 9x9. We stack N_PLANES feature planes (channels-LAST, so the shape
-is (9, 9, N_PLANES) for one position — Flax convolutions expect channels last).
+is (9, 9, N_PLANES) for one position - Flax convolutions expect channels last).
 
 Everything is written from the CURRENT player's point of view (plane 0 is always
 "my" pawn, plane 4 is always "my" walls left). That way one network handles both
@@ -9,7 +9,6 @@ sides; the only thing that differs per side is which goal row is "forward", whic
 plane 6 tells the network.
 
 Plane layout
-------------
     0  my pawn            (one-hot on the 9x9 grid)
     1  opponent pawn      (one-hot)
     2  horizontal walls   (1.0 at each H anchor (r, c); rows/cols 0..7 used)
@@ -23,7 +22,7 @@ from __future__ import annotations
 
 import jax.numpy as jnp
 
-from engine.state import WALLS_PER_PLAYER, GameState  # noqa: F401 (used in TODO 4/5)
+from engine.state import WALLS_PER_PLAYER, GameState
 
 N_PLANES = 7
 
@@ -33,7 +32,7 @@ def encode_state(state: GameState) -> jnp.ndarray:
 
     Reminder: JAX arrays are immutable. You don't write `planes[r, c, k] = v`;
     you write `planes = planes.at[r, c, k].set(v)`, which returns a NEW array.
-    Reassign every time, or your change is lost.
+    Reassign every time, or our change is lost.
     """
     cur = state.to_move
     opp = 1 - cur
