@@ -107,7 +107,8 @@ def main() -> None:
         stats.update(samples=new, buffer=len(buffer), seconds=time.time() - tic)
         logger.log("selfplay", it, stats)
 
-        if new == 0:  # the very first iterations may finish no game at all
+        if new == 0:  # no game finished: nothing to learn from yet
+            print(f"iter {it}: no game finished in {args.steps} moves, skipped")
             continue
         mix = args.warm_mix * max(0.0, 1 - (it - 1) / args.warm_iters)
         steps = max(1, round(args.reuse * new / args.batch))
