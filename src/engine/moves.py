@@ -69,18 +69,38 @@ def _slot_free(walls: frozenset[Wall], orient: str, r: int, c: int) -> bool:
     )
 
 
+def _wall_edges(orient: str, r: int, c: int) -> tuple[frozenset, frozenset]:
+    """The two cell-to-cell edges a wall blocks."""
+    if orient == "H":
+        return frozenset(((r, c), (r + 1, c))), frozenset(((r, c + 1), (r + 1, c + 1)))
+    return frozenset(((r, c), (r, c + 1))), frozenset(((r + 1, c), (r + 1, c + 1)))
+
+
 def wall_placements(state: GameState) -> list[Wall]:
-    """All legal wall placements for the player to move."""
+    """All legal wall placements for the player to move.
+
+    Fast path: a wall that touches neither player's shortest path can't cut anyone
+    off, so only walls that do get the full (expensive) path re-check.
+    """
     if state.walls_left[state.to_move] == 0:
         return []
-    from engine.pathcheck import wall_keeps_paths
+    from engine.pathcheck import shortest_path_edges, wall_keeps_paths
+    from engine.state import GOAL_ROWS
 
     walls = state.walls
+    on_path = shortest_path_edges(walls, state.pawns[0], GOAL_ROWS[0])
+    on_path |= shortest_path_edges(walls, state.pawns[1], GOAL_ROWS[1])
+
     placements: list[Wall] = []
     for r in range(8):
         for c in range(8):
             for orient in ("H", "V"):
-                wall = (orient, r, c)
-                if _slot_free(walls, orient, r, c) and wall_keeps_paths(state, wall):
-                    placements.append(wall)
+                if not _slot_free(walls, orient, r, c):
+                    continue
+                e1, e2 = _wall_edges(orient, r, c)
+                if e1 in on_path or e2 in on_path:
+                    if wall_keeps_paths(state, (orient, r, c)):
+                        placements.append((orient, r, c))
+                else:
+                    placements.append((orient, r, c))
     return placements

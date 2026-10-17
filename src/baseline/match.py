@@ -39,11 +39,12 @@ def play_game(
     max_moves: int = 400,
     view: bool = False,
     delay: float = 0.0,
+    state: GameState | None = None,
 ) -> int | None:
-    """Play one game; return the winning player (0/1) or None if move cap hit.
-    With view=True, print the board and the move played after every ply.
+    """Play one game (from `state`, default the start); return the winner or None
+    if the move cap is hit. With view=True, print the board after every ply.
     """
-    state = initial_state()
+    state = state or initial_state()
     agents = (agent0, agent1)
     if view:
         print(render(state))
