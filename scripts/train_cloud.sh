@@ -26,6 +26,8 @@ uv pip install -p .venv -q -e ".[ml,dev]" "jax[cuda12]==0.10.2"
 WANDB=""
 if [ -n "${WANDB_API_KEY:-}" ]; then
   WANDB="--wandb"
+  # Save the key to ~/.netrc: tmux sessions don't inherit exported variables.
+  .venv/bin/wandb login "$WANDB_API_KEY" >/dev/null
   if [ ! -d "runs/$RUN" ]; then  # new machine: continue from the last backup, if any
     ENTITY=${WANDB_ENTITY:-$(.venv/bin/python -c "import wandb; print(wandb.Api().default_entity)")}
     .venv/bin/wandb artifact get "$ENTITY/quorizero/run-$RUN:latest" --root "runs/$RUN" \
