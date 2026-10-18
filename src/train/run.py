@@ -6,8 +6,9 @@
 Everything lives in runs/<name>/: config, logs, `latest` weights and `optimizer`
 state (every iteration) and `iter_NNNN` snapshots (every --eval-every).
 Re-running the same command resumes exactly from there. With --wandb the whole
-directory is also backed up to W&B after every iteration (artifact run-<name>),
-so even a destroyed cloud box loses at most one iteration. Restore with:
+directory is also backed up to W&B every --backup-every iterations (artifact
+run-<name>; each version stores ~16 MB of new weights, so every iteration would
+fill the free 5 GB in ~300 iterations). Restore with:
     wandb artifact get <entity>/quorizero/run-<name>:latest --root runs/<name>
 Why each choice: docs/training.md.
 """
@@ -56,6 +57,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--warm-mix", type=float, default=0.5, help="heuristic value share")
     p.add_argument("--warm-iters", type=int, default=20, help="iters to fade it out")
     p.add_argument("--eval-every", type=int, default=10)
+    p.add_argument("--backup-every", type=int, default=10, help="W&B backup interval")
     p.add_argument("--eval-games", type=int, default=256)
     p.add_argument("--eval-sims", type=int, default=64)
     p.add_argument("--seed", type=int, default=0)
@@ -144,7 +146,8 @@ def main() -> None:
         save_checkpoint(run_dir / "optimizer", optimizer)
         progress["iteration"] = it
         progress_file.write_text(json.dumps(progress))
-        logger.backup(f"run-{args.name}", run_dir, ["latest", f"iter_{it:04d}"])
+        if it % args.backup_every == 0:
+            logger.backup(f"run-{args.name}", run_dir, ["latest", f"iter_{it:04d}"])
         print(
             f"iter {it}: {stats['games']:.0f} games, {new} samples, "
             f"len {stats['avg_length']:.0f}, draws {stats['draws']:.0f}, "
