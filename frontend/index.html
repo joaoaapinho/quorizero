@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quoridor · joaoapinho</title>
+  <meta name="description" content="Play Quoridor against QuoriZero, a bot that taught itself the game through self-play.">
+  <script>
+    // Pick the look before the first paint: a saved choice, else dark + classic board.
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem('qz-theme') || 'dark';
+      document.documentElement.dataset.board = localStorage.getItem('qz-board') || 'classic';
+    } catch {
+      document.documentElement.dataset.theme = 'dark';
+      document.documentElement.dataset.board = 'classic';
+    }
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="back" href="https://joaoapinho.dev/">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        <span>Back</span>
+      </a>
+      <div class="top-right">
+        <span class="crumb">Quoridor</span>
+        <button type="button" class="icon-btn" id="board-style" aria-label="Classic wooden board" aria-pressed="false" title="Classic/theme board">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="theme" aria-label="Switch light or dark" title="Light / dark">
+          <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h1>Quoridor</h1>
+      <p>A quiet corner to play Quoridor. Race to the other side, slow your opponent down
+      with walls, and take all the time you need. Play a friend, or QuoriZero, a bot that
+      taught itself the game.</p>
+    </section>
+
+    <section id="challenge" class="challenge" hidden>
+      <div class="challenge-idle">
+        <strong>The QuoriZero challenge</strong>
+        <p>The first to beat QuoriZero at full strength wins a <span id="prize">$15 gift card</span>.
+        It moves first.</p>
+      </div>
+      <div class="challenge-active">
+        <strong>Challenge in progress</strong>
+        <p>QuoriZero plays at full strength and moves first. The settings stay fixed until you
+        leave the challenge.</p>
+      </div>
+      <button type="button" class="btn primary" id="challenge-start">Take the challenge</button>
+    </section>
+
+    <section class="game">
+      <div class="board-col">
+        <div class="odds" aria-live="polite">
+          <div class="odds-labels">
+            <span id="odds-p1" class="p1-text"></span>
+            <span class="odds-title">Win probability</span>
+            <span id="odds-p2" class="p2-text"></span>
+          </div>
+          <div class="odds-bar"><div id="odds-fill"></div></div>
+        </div>
+        <svg id="board" role="img" aria-label="Quoridor board"></svg>
+        <p id="status" class="status"></p>
+      </div>
+
+      <aside class="panel">
+        <div class="lock-note" id="lock-note" hidden>
+          <span>The challenge settings are fixed: <span id="lock-sims">800</span> simulations,
+          QuoriZero moves first.</span>
+          <button type="button" class="link-btn" id="lock-leave">Leave challenge</button>
+        </div>
+        <div class="group">
+          <span class="label">Mode</span>
+          <div class="segmented" id="mode">
+            <button type="button" data-value="ai">vs QuoriZero</button>
+            <button type="button" data-value="human">2 players</button>
+          </div>
+        </div>
+
+        <div class="group" id="side-group">
+          <span class="label">You move</span>
+          <div class="segmented" id="side">
+            <button type="button" data-value="0">First</button>
+            <button type="button" data-value="1">Second</button>
+          </div>
+        </div>
+
+        <div class="group" id="level-group">
+          <span class="label">Difficulty</span>
+          <div class="segmented" id="level">
+            <button type="button" data-value="easy">Easy</button>
+            <button type="button" data-value="medium">Medium</button>
+            <button type="button" data-value="hard">Hard</button>
+          </div>
+          <div class="slider-row">
+            <label for="sims">Simulations</label>
+            <output id="sims-out" for="sims"></output>
+          </div>
+          <input type="range" id="sims" min="0" max="7" step="1">
+          <p class="hint" id="level-hint"></p>
+        </div>
+
+        <div class="players">
+          <div class="player"><span class="dot p1"></span><span id="name-p1"></span><span class="walls" id="walls-p1"></span></div>
+          <div class="player"><span class="dot p2"></span><span id="name-p2"></span><span class="walls" id="walls-p2"></span></div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="new-game">New game</button>
+          <button type="button" class="btn" id="resign">Resign</button>
+        </div>
+
+        <details class="rules">
+          <summary>How to play</summary>
+          <p>Reach the row tinted in your colour first. Each turn, either step one square
+          (jump over the other pawn if it blocks you) or place one of your 10 walls in a
+          groove. Walls can slow anyone down but may never cut a player off completely.</p>
+        </details>
+
+        <div class="history">
+          <span class="label">Moves</span>
+          <ol id="history"></ol>
+        </div>
+      </aside>
+    </section>
+
+    <dialog id="result">
+      <h2 id="result-text"></h2>
+      <p id="result-detail"></p>
+      <form id="claim" class="claim" hidden>
+        <label for="claim-email">Leave your email. The first verified win gets the gift card.</label>
+        <div class="claim-row">
+          <input type="email" id="claim-email" required maxlength="254" placeholder="you@example.com" autocomplete="email">
+          <button type="submit" class="btn primary" id="claim-submit">Send</button>
+        </div>
+        <p id="claim-status" class="hint" aria-live="polite"></p>
+        <p class="hint fine-print">One prize. Every win is reviewed.</p>
+      </form>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="again">Play again</button>
+        <button type="button" class="btn" id="leave" hidden>Leave challenge</button>
+      </div>
+    </dialog>
+
+    <footer>
+      <span id="version"></span>
+      <span>Games against the bot are recorded anonymously to help it improve.</span>
+    </footer>
+  </main>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

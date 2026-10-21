@@ -14,10 +14,11 @@ INF = math.inf
 
 
 def _candidates(state: GameState) -> list[tuple[int, GameState]]:
-    """(action, resulting_state) pairs, pruned and ordered best-first.
+    """
+    (action, resulting_state) pairs, pruned and ordered best-first.
     Only walls that actually lengthen the opp's path are considered - a
-    wall that doesn't is strategically pointless and just bloats the tree. This
-    is the "try blocks first" move ordering, plus pawn advances.
+    wall that doesn't is pointless and just bloats the tree. "Try blocks first"
+    move ordering, plus pawn advances.
     """
     player = state.to_move
     opp = 1 - player

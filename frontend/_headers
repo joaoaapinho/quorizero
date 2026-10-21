@@ -1,0 +1,4 @@
+# Cloudflare Pages: cross-origin isolation lets onnxruntime-web use threads.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: credentialless

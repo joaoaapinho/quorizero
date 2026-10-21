@@ -18,13 +18,18 @@ dev = [
     "ruff==0.12.3",
     "pre-commit==4.2.0",
 ]
-# JAX / neural-network stack (CPU wheels by default).
-# For GPU on the RTX 3070, reinstall jax with: pip install "jax[cuda12]"==0.10.2
+# JAX stack (CPU wheels by default). On an NVIDIA GPU also install:
+#   pip install "jax[cuda12]==0.10.2"
 ml = [
     "jax==0.10.2",
     "flax==0.12.8",
     "optax==0.2.8",
-    "orbax-checkpoint==0.12.1",
+    "orbax-checkpoint==0.11.36",
+    "mctx==0.0.71",
+    "wandb==0.28.2",
+    "jax2onnx==0.17.1",
+    "onnx==1.23.2",
+    "onnxruntime==1.31.0",
 ]
 
 [tool.black]

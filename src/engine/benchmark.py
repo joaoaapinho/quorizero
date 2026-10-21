@@ -1,4 +1,7 @@
-"""Baseline speed check for step() / legal_actions(): python -m engine.benchmark"""
+"""
+Baseline speed check for step() / legal_actions()
+python -m engine.benchmark
+"""
 
 from __future__ import annotations
 
@@ -12,7 +15,7 @@ from engine.state import initial_state, is_terminal
 def _play_random_game(rng: random.Random) -> tuple[int, int]:
     state = initial_state()
     steps = legal_calls = 0
-    for _ in range(400):  # cap to avoid pathological non-terminating games
+    for _ in range(400):  # cap to avoid non-terminating games
         actions = legal_actions(state)
         legal_calls += 1
         state, done, _ = step(state, rng.choice(actions))

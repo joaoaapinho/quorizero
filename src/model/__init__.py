@@ -1,16 +1,12 @@
-"""Neural network (Flax NNX): state encoding, ResNet trunk + policy/value heads."""
+"""Neural network (Flax NNX): ResNet trunk + policy/value/margin heads."""
 
-from model.checkpoint import load_checkpoint, save_checkpoint
-from model.features import N_PLANES, encode_batch, encode_state
-from model.network import ACTION_SIZE, QuoridorNet, create_model
+from model.checkpoint import load_checkpoint, load_model, save_checkpoint
+from model.network import QuoridorNet, create_model
 
 __all__ = [
-    "ACTION_SIZE",
-    "N_PLANES",
     "QuoridorNet",
     "create_model",
-    "encode_batch",
-    "encode_state",
     "load_checkpoint",
+    "load_model",
     "save_checkpoint",
 ]

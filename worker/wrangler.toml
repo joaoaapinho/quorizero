@@ -1,0 +1,16 @@
+# Deploy: see docs/training.md ("Website"). Free tier is plenty: one write per game.
+name = "quorizero-games"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "quorizero"
+database_id = "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+
+[vars]
+OWNER_EMAIL = "REPLACE_WITH_YOUR_EMAIL"   # where challenge claims are sent
+
+# Secrets (not in this file):
+#   npx wrangler secret put EXPORT_TOKEN     # owner token: export, challenge switch
+#   npx wrangler secret put RESEND_API_KEY   # from resend.com, for claim emails

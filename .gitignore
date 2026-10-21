@@ -19,6 +19,10 @@ checkpoints/
 runs/
 outputs/
 wandb/
+data/
+logs/
+model_registry/
+frontend/model/
 *.pt
 *.pth
 *.ckpt
