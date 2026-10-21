@@ -1,9 +1,6 @@
-"""Export a checkpoint to ONNX for the browser bot (onnxruntime-web).
-
-    python -m model.export runs/main/iter_0100 frontend/model
-
-Writes model.onnx (input: canonical planes (B, 9, 9, N_PLANES); outputs: policy
-logits, value, margin) and version.json, then checks ONNX == JAX on real positions.
+"""
+Export a checkpoint to ONNX for the browser (onnxruntime-web), checked against JAX
+python -m model.export runs/main/iter_0100 frontend/model
 """
 
 from __future__ import annotations

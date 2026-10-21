@@ -1,17 +1,6 @@
-"""What the network sees: the board from the mover's side, plus its symmetries.
-
-Canonical view: the board is flipped so the player to move always heads to row 0.
-One network then plays both seats without learning the game twice (player 1
-already heads to row 0; player 0's board is flipped). The left-right mirror is a
-true symmetry of Quoridor, so every training position is also seen mirrored.
-
-Planes (9, 9, N_PLANES), channels last:
-    0 my pawn   1 opponent pawn   2 H walls   3 V walls
-    4 my walls left / 10   5 opponent walls left / 10
-    6 my distance-to-goal map   7 opponent distance map   8 ones (marks the board)
-The distance maps carry the key Quoridor quantity (shortest paths) that a small
-conv net would otherwise need many layers to work out (KataGo: game-specific
-input features speed up learning).
+"""
+Network input: canonical planes (mover always heads to row 0), mirror symmetry.
+Planes: my/opp pawn, H/V walls, my/opp walls left, my/opp distance-to-goal, ones.
 """
 
 from __future__ import annotations
@@ -55,6 +44,7 @@ def flip(state: State) -> State:
     )
 
 
+# Mirror augmentation: left-right symmetry, free extra data.
 def mirror(state: State) -> State:
     """Columns reversed: an equally valid game state (left-right symmetry)."""
     return state._replace(
@@ -97,7 +87,7 @@ def observe(state: State) -> jax.Array:
         walls(s.v_walls),
         const(s.walls_left[me] / WALLS_PER_PLAYER),
         const(s.walls_left[opp] / WALLS_PER_PLAYER),
-        dist(0),
+        dist(0),  # KataGo-style game-specific input: shortest-path maps
         dist(8),
         const(1.0),
     ]

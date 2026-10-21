@@ -1,21 +1,19 @@
-"""Website games: download, validate by replaying, turn into positions.
-
-Each record (worker/schema.sql) stores moves as the engine's 140-action indices.
-A game is kept only if it was completed, every move is legal under the Python
-reference engine, and the replay produces the stored winner. Anything a tampered
-browser sends that breaks the rules is dropped here, not trusted.
+"""
+Website games: download, validate by replaying, turn into positions.
+Kept only if completed, legal under the Python engine and with the stored winner.
 """
 
 from __future__ import annotations
 
 import json
+import urllib.parse
 import urllib.request
 
 from engine.actions import legal_actions, step
 from engine.state import GameState, initial_state
 
-MIN_PLIES = 10  # shorter "games" are resignations or noise
-PAGE = 1000
+MIN_PLIES = 10  # shorter games are resignations or noise
+PAGE = 1000  # games are downloaded in pages of x
 
 
 def fetch(api_url: str, token: str, since_ms: int) -> list[dict]:
@@ -32,6 +30,16 @@ def fetch(api_url: str, token: str, since_ms: int) -> list[dict]:
         if len(page) < PAGE:
             return games
         since_ms = page[-1]["created_at"]
+
+
+def fetch_game(api_url: str, token: str, game_id: str) -> dict:
+    """One stored game by id (owner only), to review a challenge claim."""
+    request = urllib.request.Request(
+        f"{api_url.rstrip('/')}/games?id={urllib.parse.quote(game_id)}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    with urllib.request.urlopen(request) as response:
+        return json.load(response)["games"][0]
 
 
 def replay(record: dict) -> list[GameState] | None:

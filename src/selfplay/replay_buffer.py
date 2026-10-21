@@ -1,5 +1,5 @@
-"""Replay buffer: the most recent N samples in host memory, sampled uniformly.
-
+"""
+Replay buffer: the most recent N samples in host memory, sampled uniformly.
 Stores compact game states (~300 bytes) instead of network input planes (~3 KB);
 planes are rebuilt on the GPU per batch, which also makes mirroring free.
 """

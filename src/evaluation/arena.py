@@ -1,11 +1,7 @@
-"""Arena: matches between agents, with paired openings to cancel luck.
-
-Games come in pairs: both start from the same random opening (a few random pawn
-moves) and the agents swap seats. Deterministic bots would otherwise replay the
-same two games forever, and the opening/first move would bias the result.
-
-play_match: engine.GameState agents (slow; e.g. the minimax baseline).
-play_batch: batched JAX agents (states, key) -> actions, all games at once.
+"""
+Matches between agents, from paired random openings with seats swapped
+play_match: engine.GameState agents (slow, e.g. minimax)
+play_batch: batched JAX agents, all games at once
 """
 
 from __future__ import annotations
@@ -29,7 +25,8 @@ OPENING_PLIES = 4
 _vstep = jax.jit(jax.vmap(jax_step))
 
 
-def _opening(rng: random.Random) -> GameState:
+def random_opening(rng: random.Random) -> GameState:
+    """The start position after OPENING_PLIES random pawn moves."""
     state = initial_state()
     for _ in range(OPENING_PLIES):
         pawn_moves = [a for a in legal_actions(state) if a < N_PAWN]
@@ -45,7 +42,7 @@ def play_match(
     a_wins = b_wins = draws = 0
     for g in range(num_games):
         if g % 2 == 0:
-            start = _opening(rng)
+            start = random_opening(rng)
         a_seat = g % 2
         first, second = (agent_a, agent_b) if a_seat == 0 else (agent_b, agent_a)
         result = play_game(first, second, max_moves, state=start)

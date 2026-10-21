@@ -1,10 +1,6 @@
-"""Quoridor rules in JAX: one game as fixed-shape arrays, so thousands run at once.
-
-A line-for-line twin of engine/ (the Python reference): same board, wall anchors
-and 140-action layout, checked move by move in tests/jaxgame. Every function
-handles ONE game; callers batch with jax.vmap. Wall legality needs a path check
-for all 128 candidate walls on every move - the hot spot of self-play - so it
-runs as a bitboard flood fill (one uint32 per row), ~6x faster than bool grids.
+"""
+Quoridor rules in JAX, one game per call (batch with jax.vmap)
+Twin of engine/, checked move by move in tests/jaxgame
 """
 
 from __future__ import annotations
@@ -113,6 +109,7 @@ def _reaches(pawn: jax.Array, goal_row: int, right: jax.Array, down: jax.Array):
     return reach[goal_row] != 0
 
 
+# bitboard flood fill: one uint32 per row, ~6x faster than bool grids
 def _keeps_paths(state: State) -> jax.Array:
     """bool (128,): each candidate wall leaves both players a route to their goal."""
     right, down = open_edges(state.h_walls, state.v_walls)

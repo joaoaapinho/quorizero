@@ -1,15 +1,5 @@
-"""Network-guided search with DeepMind's mctx: batched over games, all on the GPU.
-
-Self-play uses Gumbel AlphaZero (Danihelka et al., ICLR 2022): sequential halving
-over Gumbel-sampled root moves. It is guaranteed to improve the policy even with
-few simulations (32-64 here vs AlphaZero's 800), which makes self-play cheap. Its
-training target is the improved policy softmax(logits + sigma(completed Q)).
-
-Playing (evaluation, the website) uses classic PUCT with no noise: strong at large
-budgets and simple to port to the browser (frontend/src/search.js mirrors it).
-
-The real rules are the search model, as in Pgx's AlphaZero example: rewards and
-game ends come from jaxgame.step, priors and values from the network.
+"""
+Batched mctx search on the GPU: Gumbel AlphaZero for self-play, PUCT for play.
 """
 
 from __future__ import annotations
@@ -39,6 +29,7 @@ def evaluate(model, states):
 
 
 def _recurrent_fn(graphdef):
+    # mctx's MuZero-style hook (learned-model API), fed the real rules instead
     def recurrent_fn(params, key, action, states):
         nxt = jax.vmap(step)(states, action)
         logits, value = evaluate(nnx.merge(graphdef, params), nxt)
@@ -66,8 +57,9 @@ def run_search(model, states, key, sims: int, gumbel: bool):
         num_simulations=sims,
         invalid_actions=~states.legal,
     )
-    if gumbel:
+    if gumbel:  # Gumbel AlphaZero: sampled root moves, sequential halving, few sims
         return mctx.gumbel_muzero_policy(**search)
+    # PUCT (AlphaZero): prior-weighted exploration bonus, no root noise
     return mctx.muzero_policy(**search, dirichlet_fraction=0.0, temperature=0.0)
 
 
@@ -84,8 +76,8 @@ def net_agent(model, sims: int):
 
 @jax.jit
 def greedy_agent(states, key):
-    """Depth-1 shortest-path bot (minimax baseline at depth 1), random tie-breaks.
-
+    """
+    Depth-1 shortest-path bot (minimax baseline at depth 1), random tie-breaks.
     A fixed, model-free anchor for Elo: maximise opponent path - own path.
     """
     goals = jnp.array(GOAL_ROWS)

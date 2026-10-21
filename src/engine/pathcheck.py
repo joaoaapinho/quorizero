@@ -13,7 +13,8 @@ from engine.state import BOARD_SIZE, DIRS, GameState, Wall, on_board
 def shortest_distance(
     walls: frozenset[Wall], start: tuple[int, int], goal_row: int
 ) -> int | None:
-    """Fewest steps from start to any cell in goal_row, or None if unreachable.
+    """
+    Fewest steps from start to any cell in goal_row, or None if unreachable.
     Ignores opponent pawns, same as has_path - used by the heuristic evaluation.
     """
     seen = {start}

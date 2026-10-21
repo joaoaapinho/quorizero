@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
-# Overnight training on a rented GPU (Vast.ai / RunPod; any CUDA 12 box, 4090-class).
+# Training on a rented GPU (Vast.ai)
 #
 #   git clone <this repo> quorizero && cd quorizero
 #   WANDB_API_KEY=... bash scripts/train_cloud.sh            # setup, then train in tmux
 #   WANDB_API_KEY=... bash scripts/train_cloud.sh --sims 64  # extra args go to train.run
-#   tmux attach -t train                                     # watch (Ctrl-b d detaches)
-#
-# Re-running resumes from runs/$RUN, so preemptions and crashes cost one iteration.
-# With WANDB_API_KEY set, runs/$RUN is backed up to W&B every iteration, and a
-# fresh box pulls that backup first - losing the whole machine loses one iteration.
-# Copy the run home in the morning:  rsync -av <box>:quorizero/runs/$RUN runs/
+#   tmux attach -t train                                     # watch
+
+# Copy the run:  rsync -av <box>:quorizero/runs/$RUN runs/
 set -euo pipefail
 cd "$(dirname "$0")/.."
 RUN=${RUN:-overnight}
@@ -26,7 +23,6 @@ uv pip install -p .venv -q -e ".[ml,dev]" "jax[cuda12]==0.10.2"
 WANDB=""
 if [ -n "${WANDB_API_KEY:-}" ]; then
   WANDB="--wandb"
-  # Save the key to ~/.netrc: tmux sessions don't inherit exported variables.
   .venv/bin/wandb login "$WANDB_API_KEY" >/dev/null
   if [ ! -d "runs/$RUN" ]; then  # new machine: continue from the last backup, if any
     ENTITY=${WANDB_ENTITY:-$(.venv/bin/python -c "import wandb; print(wandb.Api().default_entity)")}

@@ -1,10 +1,7 @@
-"""Self-play on the GPU: thousands of games at once in one jit-compiled scan.
-
-Every lane plays with Gumbel search; a finished game is replaced by a fresh one
-in the same lane (auto-reset, as in Pgx), so the batch stays full. Each move gives
-a sample: the state, the improved search policy and - once its game ends - the
-outcome for the player who moved. Moves of games still running when the scan
-stops have no outcome yet and are dropped (no bootstrapped guesses).
+"""
+Self-play on the GPU: K games at once in one jit-compiled scan (Gumbel search)
+A finished game is replaced by a fresh one in its lane, so the batch stays full
+Samples: state, improved policy, outcome. Unfinished games are dropped
 """
 
 from __future__ import annotations
@@ -30,7 +27,7 @@ class Sample(NamedTuple):
 
 
 def _for_mover(pair: jax.Array, mover: jax.Array, mine: bool = True) -> jax.Array:
-    """Pick column `mover` (or the opponent's) from a (B, 2) per-player array."""
+    """Pick column 'mover' (or the opponent's) from a (B, 2) per-player array."""
     idx = mover if mine else 1 - mover
     return jnp.take_along_axis(pair, idx[:, None], axis=1)[:, 0]
 
@@ -96,7 +93,7 @@ def _play(model, key, lanes: int, steps: int, sims: int):
 
 
 def selfplay(model, key, lanes: int, steps: int, sims: int):
-    """Play `steps` moves in each of `lanes` games -> (Sample on host, stats)."""
+    """Play 'steps' moves in each of 'lanes' games -> (Sample on host, stats)."""
     model.eval()
     samples, known, stats = _play(model, key, lanes, steps, sims)
     keep = np.asarray(known).reshape(-1)
@@ -120,8 +117,8 @@ def _reanalyze(model, states, key, sims: int) -> Sample:
 
 
 def reanalyze(model, states: State, key, sims: int, batch: int = 512) -> Sample:
-    """Fresh search targets for positions from outside self-play (MuZero Reanalyze).
-
+    """
+    Fresh search targets for positions from outside self-play (MuZero Reanalyze).
     Policy and value come from searching each position with the current network,
     so human mistakes shape which positions are learned from, not the targets.
     """

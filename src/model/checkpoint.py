@@ -1,8 +1,5 @@
-"""Save / load NNX objects (model weights, optimizer moments) with Orbax.
-
-An NNX object splits into (graphdef, state): graphdef is the static structure,
-state the arrays. Orbax saves the state; loading restores it into a template
-built the same way and merges the two back together.
+"""
+Save / load NNX objects (weights, optimizer moments) with Orbax
 """
 
 from __future__ import annotations

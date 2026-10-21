@@ -6,8 +6,8 @@ from engine.state import DIRS, GameState, Wall, on_board
 
 
 def edge_blocked(walls: frozenset[Wall], r: int, c: int, nr: int, nc: int) -> bool:
-    """True if a wall blocks the step between orthogonally adjacent cells.
-
+    """
+    True if a wall blocks the step between orthogonally adjacent cells.
     Out-of-range wall anchors are absent from 'walls', so membership
     tests handle board edges without extra bounds checks.
     """
@@ -77,8 +77,8 @@ def _wall_edges(orient: str, r: int, c: int) -> tuple[frozenset, frozenset]:
 
 
 def wall_placements(state: GameState) -> list[Wall]:
-    """All legal wall placements for the player to move.
-
+    """
+    All legal wall placements for the player to move.
     Fast path: a wall that touches neither player's shortest path can't cut anyone
     off, so only walls that do get the full (expensive) path re-check.
     """

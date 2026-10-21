@@ -1,16 +1,11 @@
-"""Gumbel AlphaZero loop: self-play -> replay buffer -> train -> evaluate, repeat.
+"""
+Gumbel AlphaZero training loop: self-play -> replay buffer -> train -> evaluate
 
-    python -m train.run --name overnight --wandb   # see scripts/train_cloud.sh
-    python -m train.run --name smoke --lanes 32 --steps 24 --sims 8 --iterations 2
+python -m train.run --name overnight --wandb   # see scripts/train_cloud.sh
+python -m train.run --name smoke --lanes 32 --steps 24 --sims 8 --iterations 2
 
-Everything lives in runs/<name>/: config, logs, `latest` weights and `optimizer`
-state (every iteration) and `iter_NNNN` snapshots (every --eval-every).
-Re-running the same command resumes exactly from there. With --wandb the whole
-directory is also backed up to W&B every --backup-every iterations (artifact
-run-<name>; each version stores ~16 MB of new weights, so every iteration would
-fill the free 5 GB in ~300 iterations). Restore with:
-    wandb artifact get <entity>/quorizero/run-<name>:latest --root runs/<name>
-Why each choice: docs/training.md.
+Resumes from runs/<name>/; restore a W&B backup:
+wandb artifact get <entity>/quorizero/run-<name>:latest --root runs/<name>
 """
 
 # ruff: noqa: E402  (GPU env must be set before JAX is imported below)
@@ -112,6 +107,7 @@ def main() -> None:
         if new == 0:  # no game finished: nothing to learn from yet
             print(f"iter {it}: no game finished in {args.steps} moves, skipped")
             continue
+        # warm start: the heuristic's share of the value target fades to 0
         mix = args.warm_mix * max(0.0, 1 - (it - 1) / args.warm_iters)
         steps = max(1, round(args.reuse * new / args.batch))
         metrics = train(

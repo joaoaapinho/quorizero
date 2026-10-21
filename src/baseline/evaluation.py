@@ -9,7 +9,8 @@ WIN_SCORE = 10_000  # magnitude for a decided game; dwarfs any distance diff
 
 
 def evaluate(state: GameState, player: int) -> int:
-    """Score the position from a player's view; higher is better.
+    """
+    Score the position from a player's view, higher is better.
     Quoridor heuristic: we want a short path to our goal and a
     long one for our opponent, so score = opp_distance - my_distance.
     """

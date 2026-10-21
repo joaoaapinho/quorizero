@@ -5,7 +5,7 @@ from __future__ import annotations
 import jax.numpy as jnp
 import optax
 
-MARGIN_WEIGHT = 0.1  # auxiliary target: small, so it shapes features, not the goal
+MARGIN_WEIGHT = 0.1  # KataGo-style auxiliary target: small, shapes features only
 MARGIN_SCALE = 10.0  # margins are in steps; bring them to ~[-1, 1]
 
 

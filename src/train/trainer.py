@@ -24,7 +24,7 @@ def make_optimizer(model: QuoridorNet, lr: float, weight_decay: float = 1e-4):
 
 @nnx.jit
 def train_step(model, optimizer, batch: Sample, flip: jax.Array, value_mix: jax.Array):
-    # Mirror a random half of the batch: an exact symmetry, so free extra data.
+    # Mirror augmentation (left-right symmetry) on a random half of the batch.
     mirrored = jax.vmap(mirror)(batch.state)
     states = jax.tree.map(
         lambda m, s: jnp.where(flip.reshape((-1,) + (1,) * (s.ndim - 1)), m, s),
@@ -32,8 +32,7 @@ def train_step(model, optimizer, batch: Sample, flip: jax.Array, value_mix: jax.
         batch.state,
     )
     policy = jnp.where(flip[:, None], batch.policy[:, MIRROR], batch.policy)
-    # Warm start: early outcomes are mostly noise, so blend in the path heuristic,
-    # fading to the pure outcome (value_mix -> 0) - the final target is unbiased.
+    # Warm start (ours): path-heuristic value blended in, fading to the pure outcome.
     target_value = (1 - value_mix) * batch.value + value_mix * batch.heuristic
     obs = jax.vmap(observe)(states)
 
@@ -63,7 +62,7 @@ def train(
     rng: np.random.Generator,
     value_mix: float = 0.0,
 ) -> dict:
-    """Take `steps` gradient steps; return the mean of each metric."""
+    """Take 'steps' gradient steps; return the mean of each metric."""
     model.train()
     history = []
     for _ in range(steps):

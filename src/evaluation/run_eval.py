@@ -1,12 +1,7 @@
-"""Benchmark a checkpoint, each result with a 95% Elo interval.
-
-    python -m evaluation.run_eval runs/main/iter_0100
-    python -m evaluation.run_eval runs/main/latest --against runs/main/iter_0050
-
-Opponents: the greedy depth-1 bot (batched, fast), the Python minimax baseline at
-each --depths (slow, so fewer games) and optionally another checkpoint. Any
-engine.GameState -> action function (e.g. an adapter for an external bot) can be
-added the same way as the minimax agent.
+"""
+Benchmark a checkpoint vs greedy, minimax and another checkpoint (Elo, 95% CI)
+python -m evaluation.run_eval runs/main/iter_0100
+python -m evaluation.run_eval runs/main/latest --against runs/main/iter_0050
 """
 
 from __future__ import annotations

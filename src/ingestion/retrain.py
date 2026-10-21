@@ -1,16 +1,6 @@
-"""Periodic retrain on website games (run weekly, e.g. from cron).
-
-    QZ_EXPORT_TOKEN=... python -m ingestion.retrain --run main --api https://<worker-url>
-
-1. Download games since the last retrain; keep only valid completed ones.
-2. Reanalyse their positions with the current best: targets come from search,
-   not from the human moves, so weak or trolling play can't teach bad moves -
-   humans only contribute *positions* that self-play would rarely reach.
-3. Fine-tune a copy of the best on ~25% human positions + 75% fresh self-play,
-   so it learns those positions without forgetting what self-play taught.
-4. Gate: promote only if it scores >= 55% against the best over 400 paired
-   games - a regression can never reach the website.
-5. Export the promoted model to frontend/model (then redeploy the site).
+"""
+Retrain on website games: reanalyse, fine-tune, gate, export
+QZ_EXPORT_TOKEN=... python -m ingestion.retrain --run main --api https://<worker-url>
 """
 
 from __future__ import annotations
@@ -89,6 +79,7 @@ def main() -> None:
     best = load_model(best_path)
     key, rng = jax.random.key(stamp), np.random.default_rng(stamp)
     k_human, k_self, k_gate = jax.random.split(key, 3)
+    # MuZero reanalyze: human positions, targets from fresh search (never human moves).
     human = reanalyze(best, states, k_human, args.sims)
     own = ReplayBuffer(10**7)
     own.add(selfplay(best, k_self, args.lanes, 256, args.sims)[0])
@@ -106,6 +97,7 @@ def main() -> None:
     candidate = nnx.clone(best)
     optimizer = make_optimizer(candidate, args.lr)
     metrics = train(candidate, optimizer, sample_batch, args.steps, rng)
+    # Promotion gate: candidate vs best over paired games.
     gate = match_report(
         net_agent(candidate, args.sims), net_agent(best, args.sims), k_gate, args.games
     )

@@ -1,9 +1,5 @@
-"""Metrics logging: JSONL files as the durable source of truth, W&B optional.
-
-Everything is written to logs/<section>.jsonl (one JSON object per line, flushed
-immediately so nothing is lost on a crash). If W&B is enabled the same scalars
-are mirrored to the dashboard, and backup() uploads whole directories as
-versioned artifacts. Notebooks read the JSONL for any custom 2D/3D plot.
+"""
+Metrics logging: JSONL files (source of truth), mirrored to W&B if enabled
 """
 
 from __future__ import annotations
