@@ -5,13 +5,13 @@ from __future__ import annotations
 import jax.numpy as jnp
 import optax
 
-MARGIN_WEIGHT = 0.1  # KataGo-style auxiliary target: small, shapes features only
+MARGIN_WEIGHT = 0.1  # KataGo-style aux target: small, shapes features only
 MARGIN_SCALE = 10.0  # margins are in steps; bring them to ~[-1, 1]
 
 
 def az_loss(logits, value, margin, target_policy, target_value, target_margin):
-    """Return (policy_loss, value_loss, margin_loss).
-
+    """
+    Return (policy_loss, value_loss, margin_loss).
     Policy: cross-entropy to the search's improved policy (zero on illegal moves).
     Value: squared error to the outcome. Margin: squared error where it's known
     (NaN marks samples without one, e.g. reanalysed human positions).

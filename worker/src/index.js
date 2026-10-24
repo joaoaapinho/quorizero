@@ -6,6 +6,7 @@
 //   POST /challenge        {"open": true|false}: only the owner opens/closes it (Bearer)
 //   POST /claims           {"game_id", "email"}: a challenge win, emails the owner
 //   GET  /retrain-status   weighted losses since the last retrain, and whether one is due (Bearer)
+//                          due: at least RETRAIN_AT losses and RETRAIN_GAP_DAYS since the last run
 //   POST /retrains         record a retraining run, which restarts the count (Bearer)
 // Only the shape is checked here, the rules are checked offline by replaying
 // every game through the Python engine (src/ingestion/games.py).
@@ -22,6 +23,7 @@ const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 // level loses on purpose). Same weights in src/ingestion/retrain.py.
 const LOSS_WEIGHT = "CASE difficulty WHEN 'hard' THEN 1.0 WHEN 'challenge' THEN 1.0 WHEN 'medium' THEN 0.5 ELSE 0 END";
 const RETRAIN_AT = 5; // weighted losses, unless the RETRAIN_AT variable says otherwise
+const RETRAIN_GAP_DAYS = 7; // at most one retrain a week (RETRAIN_GAP_DAYS variable)
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -140,7 +142,9 @@ async function setChallenge(request, env) {
 
 // Losses since the last retrain: finished games QuoriZero lost with a real model loaded.
 async function retrainStatus(env) {
-  const last = await env.DB.prepare('SELECT MAX(games_until) AS since FROM retrains').first();
+  const last = await env.DB.prepare(
+    'SELECT MAX(games_until) AS since, MAX(created_at) AS last_run FROM retrains',
+  ).first();
   const since = last?.since ?? 0;
   const row = await env.DB.prepare(
     `SELECT COALESCE(SUM(${LOSS_WEIGHT}), 0) AS losses, COUNT(*) AS games, MAX(created_at) AS until
@@ -151,9 +155,14 @@ async function retrainStatus(env) {
     .bind(since)
     .first();
   const retrainAt = Number(env.RETRAIN_AT) || RETRAIN_AT;
+  const gapDays = env.RETRAIN_GAP_DAYS === undefined ? RETRAIN_GAP_DAYS : Number(env.RETRAIN_GAP_DAYS);
+  // half a day early: a run is recorded when the daily job ends, so the job a week
+  // later starts before that time and would otherwise wait one more day
+  const nextRun = (last?.last_run ?? 0) + gapDays * 86_400_000 - 43_200_000;
   return {
     since, until: row.until ?? since, losses: row.losses, games: row.games,
-    retrain_at: retrainAt, due: row.losses >= retrainAt,
+    retrain_at: retrainAt, next_run: nextRun,
+    due: row.losses >= retrainAt && Date.now() >= nextRun,
   };
 }
 

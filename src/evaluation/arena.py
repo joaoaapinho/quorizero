@@ -25,12 +25,21 @@ OPENING_PLIES = 4
 _vstep = jax.jit(jax.vmap(jax_step))
 
 
+def opening_moves(rng: random.Random) -> list[int]:
+    """OPENING_PLIES random pawn moves from the start."""
+    state, moves = initial_state(), []
+    for _ in range(OPENING_PLIES):
+        pawn_moves = [a for a in legal_actions(state) if a < N_PAWN]
+        moves.append(rng.choice(pawn_moves))
+        state = step(state, moves[-1])[0]
+    return moves
+
+
 def random_opening(rng: random.Random) -> GameState:
     """The start position after OPENING_PLIES random pawn moves."""
     state = initial_state()
-    for _ in range(OPENING_PLIES):
-        pawn_moves = [a for a in legal_actions(state) if a < N_PAWN]
-        state = step(state, rng.choice(pawn_moves))[0]
+    for action in opening_moves(rng):
+        state = step(state, action)[0]
     return state
 
 
@@ -55,16 +64,27 @@ def play_match(
     return a_wins, b_wins, draws
 
 
-def play_batch(agent_a, agent_b, key, num_games: int = 256) -> tuple[int, int, int]:
-    """Return (a_wins, b_wins, draws) over num_games (even) played in parallel."""
-    states = jax.vmap(lambda _: init())(jnp.arange(num_games))
+def play_batch(
+    agent_a, agent_b, key, num_games: int = 256, starts=None
+) -> tuple[int, int, int]:
+    """
+    Return (a_wins, b_wins, draws) over num_games (even) played in parallel.
+    starts: positions to play from instead of random openings, each one twice with
+    seats swapped (num_games is then 2 x the number of positions).
+    """
+    if starts is not None:
+        states = jax.tree.map(lambda x: jnp.repeat(jnp.asarray(x), 2, axis=0), starts)
+        num_games = states.to_move.shape[0]
     a_seat = jnp.arange(num_games) % 2
-    for _ in range(OPENING_PLIES):
-        key, sub = jax.random.split(key)
-        pair_keys = jnp.repeat(jax.random.split(sub, num_games // 2), 2, axis=0)
-        pawn_only = jnp.where(states.legal.at[:, N_PAWN:].set(False), 0.0, -jnp.inf)
-        moves = jax.vmap(jax.random.categorical)(pair_keys, pawn_only)
-        states = _vstep(states, moves)
+    if starts is None:
+        states = jax.vmap(lambda _: init())(jnp.arange(num_games))
+        for _ in range(OPENING_PLIES):
+            key, sub = jax.random.split(key)
+            pair_keys = jnp.repeat(jax.random.split(sub, num_games // 2), 2, axis=0)
+            legal_pawn = states.legal.at[:, N_PAWN:].set(False)
+            pawn_only = jnp.where(legal_pawn, 0.0, -jnp.inf)
+            moves = jax.vmap(jax.random.categorical)(pair_keys, pawn_only)
+            states = _vstep(states, moves)
     while not bool(states.done.all()):
         key, key_a, key_b = jax.random.split(key, 3)
         a_moves, b_moves = agent_a(states, key_a), agent_b(states, key_b)
@@ -80,13 +100,14 @@ def win_rate(a_wins: int, b_wins: int, draws: int) -> float:
     return (a_wins + 0.5 * draws) / total if total else 0.0
 
 
-def match_report(agent_a, agent_b, key, num_games: int = 256) -> dict:
+def match_report(agent_a, agent_b, key, num_games: int = 256, starts=None) -> dict:
     """play_batch summarised for logs: agent_a's score and Elo gap (+ 95% CI).
 
     The Elo uses (points + 1/2) / (games + 1), so a clean sweep reads as a large
     but finite gap set by the sample size, not as infinity.
     """
-    a_wins, b_wins, draws = play_batch(agent_a, agent_b, key, num_games)
+    a_wins, b_wins, draws = play_batch(agent_a, agent_b, key, num_games, starts)
+    num_games = a_wins + b_wins + draws
     score = win_rate(a_wins, b_wins, draws)
     smoothed = (score * num_games + 0.5) / (num_games + 1)
     low, high = elo_interval(smoothed, num_games)

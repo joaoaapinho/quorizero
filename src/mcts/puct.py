@@ -1,6 +1,6 @@
 """
-frontend/src/search.js in Python, move for move (PUCT)
-Re-checks website games and benchmarks other networks
+frontend/src/search.js in Python, move for move (PUCT).
+Re-checks website games and benchmarks other networks.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def _select(node: Node) -> int:
     value = node.value_sum / node.visits
     lo, hi = min([value, *qs.values()]), max([value, *qs.values()])
     scale = max(hi - lo, 1e-8)
-    # PUCT (AlphaZero): the prior's bonus fades as a child gets visits
+    # PUCT (AlphaZero): the prior's bonus fades as a child gets visits.
     explore = np.sqrt(node.visits) * (
         C_INIT + np.log((node.visits + C_BASE + 1) / C_BASE)
     )
@@ -98,7 +98,7 @@ def _simulate(root: Node, evaluate_fn: Evaluator) -> None:
 
 
 def agent(evaluate_fn: Evaluator, sims: int) -> Callable[[GameState], int]:
-    """GameState -> action: PUCT with `sims` simulations, or the raw policy if 0."""
+    """GameState -> action: PUCT with sims simulations, or the raw policy if 0."""
 
     def act(game: GameState) -> int:
         root = Node(game, evaluate_fn)

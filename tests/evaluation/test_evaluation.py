@@ -6,9 +6,12 @@ import jax
 import jax.numpy as jnp
 
 from baseline.match import baseline_agent, random_agent
+from engine.actions import legal_actions, step
+from engine.state import initial_state
 from evaluation.arena import match_report, play_batch, play_match, win_rate
 from evaluation.elo import elo_from_winrate, elo_interval, expected_score, update_elo
 from evaluation.registry import ModelRegistry
+from jaxgame import from_python
 from mcts.search import greedy_agent
 
 
@@ -67,6 +70,29 @@ def test_elo_from_winrate_is_monotonic():
     assert elo_from_winrate(0.5) == 0.0
     assert elo_from_winrate(0.75) > 0
     assert elo_from_winrate(0.25) < 0
+
+
+def test_play_batch_from_given_positions():
+    """Each start is played twice, seats swapped, from where it stands."""
+    games = mid_games()
+    starts = jax.tree.map(lambda *xs: jnp.stack(xs), *map(from_python, games))
+    a, b, d = play_batch(
+        greedy_agent, random_jax_agent, jax.random.key(2), starts=starts
+    )
+    assert a + b + d == 2 * len(games) and a > b
+    report = match_report(
+        greedy_agent, random_jax_agent, jax.random.key(3), starts=starts
+    )
+    assert report["elo_low"] < report["elo"] < report["elo_high"]
+
+
+def mid_games():
+    """Two positions a few pawn moves in."""
+    games, game = [], initial_state()
+    for _ in range(6):
+        game = step(game, legal_actions(game)[0])[0]
+        games.append(game)
+    return games[-2:]
 
 
 # --- registry ------------------------------------------------------------

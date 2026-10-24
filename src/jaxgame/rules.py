@@ -1,6 +1,6 @@
 """
-Quoridor rules in JAX, one game per call (batch with jax.vmap)
-Twin of engine/, checked move by move in tests/jaxgame
+Quoridor rules in JAX, one game per call (batch with jax.vmap).
+engine/ twin, checked move by move in tests/jaxgame.
 """
 
 from __future__ import annotations
@@ -37,8 +37,8 @@ class State(NamedTuple):
 
 
 def open_edges(h_walls: jax.Array, v_walls: jax.Array) -> tuple[jax.Array, jax.Array]:
-    """right[r, c]: (r,c)<->(r,c+1) is open (9, 8); down[r, c]: (r,c)<->(r+1,c) (8, 9).
-
+    """
+    right[r, c]: (r,c)<->(r,c+1) is open (9, 8); down[r, c]: (r,c)<->(r+1,c) (8, 9).
     A V wall at (r, c) blocks rows r and r+1; an H wall at (r, c) cols c and c+1.
     """
     v_block = jnp.pad(v_walls, ((0, 1), (0, 0))) | jnp.pad(v_walls, ((1, 0), (0, 0)))
@@ -109,7 +109,7 @@ def _reaches(pawn: jax.Array, goal_row: int, right: jax.Array, down: jax.Array):
     return reach[goal_row] != 0
 
 
-# bitboard flood fill: one uint32 per row, ~6x faster than bool grids
+# Bitboard flood fill
 def _keeps_paths(state: State) -> jax.Array:
     """bool (128,): each candidate wall leaves both players a route to their goal."""
     right, down = open_edges(state.h_walls, state.v_walls)

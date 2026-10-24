@@ -95,6 +95,12 @@ const after = await (await call('POST', '/retrains', JSON.stringify({
 check(after.losses === 0 && !after.due && after.since === s.until, 'a recorded run restarts the count');
 await lost('l9', 'hard');
 check((await status()).losses === 1, 'new losses count again');
+for (const id of ['l10', 'l11', 'l12', 'l13']) await lost(id, 'hard');
+s = await status();
+check(s.losses === 5 && !s.due && s.next_run > Date.now(), 'at most one retrain a week');
+env.RETRAIN_GAP_DAYS = '0';
+check((await status()).due, 'due once the gap has passed');
+delete env.RETRAIN_GAP_DAYS;
 
 for (let i = 0; i < 70; i++) await call('POST', '/games', JSON.stringify({ ...game, game_id: `x${i}` }));
 check((await call('POST', '/games', JSON.stringify({ ...game, game_id: 'late' }))).status === 429, 'rate limit');
