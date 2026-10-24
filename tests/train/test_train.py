@@ -45,7 +45,8 @@ def test_loop_runs_and_resumes(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("WANDB_MODE", "offline")  # exercise the backup path, no network
     monkeypatch.setenv("WANDB_DIR", str(tmp_path))
     monkeypatch.setenv("WANDB_SILENT", "true")
-    tiny = "--name t --lanes 8 --steps 96 --sims 4 --batch 32 --blocks 2 --channels 16"
+    # 200 moves: every game ends by the draw cap, so no iteration can be skipped
+    tiny = "--name t --lanes 8 --steps 200 --sims 4 --batch 32 --blocks 2 --channels 16"
     tiny += " --eval-every 1 --eval-games 4 --eval-sims 4 --wandb --backup-every 1"
     for iterations in (1, 2):
         monkeypatch.setattr(
