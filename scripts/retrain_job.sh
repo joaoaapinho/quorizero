@@ -8,6 +8,7 @@
 #   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID  redeploy the page (Pages: Edit only)
 #   WANDB_API_KEY                                optional: log the run to W&B
 #   QZ_FORCE=1                                   optional: run even if not due (tests)
+#   QZ_REPO, QZ_PAGE_BRANCH                      page code to deploy (default joaoaapinho/quorizero, main)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 RUN=${QZ_RUN:-pilot-final}
@@ -30,7 +31,11 @@ python -m ingestion.retrain --run "$RUN" --api "$QZ_API" "${extra[@]}"
 python scripts/sync_run.py up "runs/$RUN" "$QZ_BUCKET/$RUN"  # checkpoint and logs
 
 if [ -f frontend/model/model.onnx ]; then
-  wrangler pages deploy frontend --project-name "${QZ_PAGES_PROJECT:-quorizero}" --branch main
+  # the page code from GitHub, not the copy in this image: it may be older than the site
+  page=$(mktemp -d)
+  python scripts/fetch_page.py "$page" "${QZ_REPO:-joaoaapinho/quorizero}" "${QZ_PAGE_BRANCH:-main}"
+  cp -r frontend/model "$page/model"
+  wrangler pages deploy "$page" --project-name "${QZ_PAGES_PROJECT:-quorizero}" --branch main
 else
   echo "kept the current model, the site is unchanged"
 fi
