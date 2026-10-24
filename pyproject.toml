@@ -31,6 +31,10 @@ ml = [
     "onnx==1.23.2",
     "onnxruntime==1.31.0",
 ]
+# The retraining job on Google Cloud (scripts/sync_run.py)
+cloud = [
+    "google-cloud-storage==2.19.0",
+]
 
 [tool.black]
 line-length = 88

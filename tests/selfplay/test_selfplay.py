@@ -1,9 +1,12 @@
 """Self-play samples carry consistent targets; the replay buffer keeps the newest."""
 
 import jax
+import jax.numpy as jnp
 import numpy as np
 
-from jaxgame import orient_policy
+from engine.actions import legal_actions, step
+from engine.state import initial_state
+from jaxgame import from_python, orient_policy
 from model.network import create_model
 from selfplay.generate import Sample, reanalyze, selfplay
 from selfplay.replay_buffer import ReplayBuffer
@@ -27,6 +30,21 @@ def test_selfplay_targets_are_consistent():
     # The margin is positive exactly when the mover went on to win.
     assert np.all((samples.margin > 0) == (samples.value > 0))
     assert np.all(np.abs(samples.heuristic) <= 1)
+
+
+def test_selfplay_from_seed_positions():
+    model = create_model(num_blocks=2, channels=16)
+    game, positions = initial_state(), []
+    for ply in range(1, 8):
+        game = step(game, legal_actions(game)[0])[0]  # pawn moves
+        positions.append(from_python(game, ply))
+    seeds = jax.tree.map(lambda *xs: jnp.stack(xs), *positions[-2:])
+    samples, stats = selfplay(
+        model, jax.random.key(4), lanes=4, steps=96, sims=4, seeds=seeds
+    )
+    assert stats["games"] >= 1 and len(samples.value) > 0
+    # every game starts from a seed, never from the opening
+    assert samples.state.ply.min() >= int(seeds.ply.min())
 
 
 def test_reanalyze_and_buffer():

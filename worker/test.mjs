@@ -67,6 +67,35 @@ check((await one.json()).games[0].id === 'w1', 'owner can fetch one game');
 await call('POST', '/challenge', '{"open": false}', owner);
 check((await claim('w1')).status === 403, 'closed: no claims');
 
+// Retraining: weighted QuoriZero losses since the last recorded run
+const status = async () => (await call('GET', '/retrain-status', undefined, owner)).json();
+check((await call('GET', '/retrain-status')).status === 401, 'status needs the token');
+// so far: g1 (QuoriZero won) and the challenge win w1 (a loss, weight 1)
+let s = await status();
+check(s.losses === 1 && s.games === 1 && !s.due, 'only losses count');
+const lost = (id, difficulty, extra = {}) =>
+  call('POST', '/games', JSON.stringify({ ...game, game_id: id, difficulty, winner: 0, ...extra }));
+await lost('l1', 'hard');
+await lost('l2', 'medium');
+await lost('l3', 'easy'); // a casual level: worth 0
+await lost('l4', 'hard', { status: 'resigned' }); // not finished on the board
+await lost('l5', 'hard', { model_version: 'heuristic' }); // no model loaded
+await lost('l6', 'hard');
+await lost('l7', 'hard');
+s = await status();
+check(s.losses === 4.5 && s.games === 5 && !s.due, 'weights: hard 1, medium 0.5, easy 0');
+await lost('l8', 'medium');
+s = await status();
+check(s.losses === 5 && s.due && s.retrain_at === 5, 'due at 5');
+check((await call('POST', '/retrains', '{"promoted": true}', owner)).status === 400, 'run shape checked');
+check((await call('POST', '/retrains', JSON.stringify({ games_until: s.until, losses: 5, promoted: true }))).status === 401, 'recording needs the token');
+const after = await (await call('POST', '/retrains', JSON.stringify({
+  games_until: s.until, losses: s.losses, promoted: true, gate_score: 0.58, model_version: 'main/human_1',
+}), owner)).json();
+check(after.losses === 0 && !after.due && after.since === s.until, 'a recorded run restarts the count');
+await lost('l9', 'hard');
+check((await status()).losses === 1, 'new losses count again');
+
 for (let i = 0; i < 70; i++) await call('POST', '/games', JSON.stringify({ ...game, game_id: `x${i}` }));
 check((await call('POST', '/games', JSON.stringify({ ...game, game_id: 'late' }))).status === 429, 'rate limit');
-console.log('ok: worker stores, dedups, validates, rate-limits, exports, and runs the challenge');
+console.log('ok: worker stores, dedups, validates, rate-limits, exports, runs the challenge and counts losses');

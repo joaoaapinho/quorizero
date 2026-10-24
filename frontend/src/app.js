@@ -228,7 +228,7 @@ function newId() {
 }
 
 function start() {
-  if (record?.status === 'playing' && record.moves.length) {
+  if (record?.status === 'playing' && humanMoved(record)) {
     submit({ ...record, status: 'abandoned', ended_at: Date.now() });
   }
   gameId = newId();
@@ -256,7 +256,7 @@ function start() {
 function finish(winner, how) {
   over = true;
   thinking = false;
-  if (record) {
+  if (record && humanMoved(record)) {
     Object.assign(record, { status: how, winner, ended_at: Date.now() });
     submit(record);
   }
@@ -431,6 +431,8 @@ const PENDING = 'qz-pending', CURRENT = 'qz-current';
 function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
 function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
 const clean = ({ last, ...game }) => game;
+// Only games the player took part in: QuoriZero's opening move alone is not a game.
+const humanMoved = (game) => game.moves.length > game.human_side;
 
 async function upload(game) {
   if (!API_URL) return false; // no API yet: keep it queued locally
@@ -456,7 +458,7 @@ function submit(game) {
 }
 
 addEventListener('pagehide', () => {
-  if (record?.status !== 'playing' || !record.moves.length) return;
+  if (record?.status !== 'playing' || !humanMoved(record)) return;
   record.status = 'abandoned';
   record.ended_at = Date.now();
   if (API_URL) navigator.sendBeacon(`${API_URL}/games`, JSON.stringify(clean(record)));
@@ -466,7 +468,7 @@ addEventListener('pagehide', () => {
 // Start-up
 
 const interrupted = load(CURRENT, null); // the tab closed mid-game last time
-if (interrupted) submit({ ...interrupted, status: 'abandoned', ended_at: Date.now() });
+if (interrupted && humanMoved(interrupted)) submit({ ...interrupted, status: 'abandoned', ended_at: Date.now() });
 flush();
 
 if (API_URL) {

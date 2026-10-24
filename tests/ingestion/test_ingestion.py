@@ -1,8 +1,9 @@
-"""Website games are replayed before use; the retrain gate decides promotion."""
+"""Website games are replayed before use; only QuoriZero's losses are retrained on."""
 
-import json
 import random
 import sys
+
+import pytest
 
 from engine.actions import legal_actions, step
 from engine.state import initial_state
@@ -24,6 +25,9 @@ def played_game(seed: int = 0) -> dict:
     return {
         "status": "completed",
         "winner": win,
+        "human_side": win,  # the player won: a QuoriZero loss
+        "difficulty": "hard",
+        "model_version": "t/latest",
         "moves": moves,
         "created_at": seed + 1,
     }
@@ -38,21 +42,56 @@ def test_replay_keeps_only_valid_games():
     assert replay({**game, "moves": game["moves"][:-1]}) is None  # unfinished
 
 
+def test_only_counted_losses_are_used():
+    loss = played_game()
+    games = [
+        loss,
+        {**loss, "human_side": 1 - loss["winner"]},  # QuoriZero won
+        {**loss, "difficulty": "easy"},  # Easy loses on purpose
+        {**loss, "status": "resigned"},
+        {**loss, "model_version": "heuristic"},  # no model was loaded
+        {**loss, "created_at": 99},  # after the status snapshot
+    ]
+    assert retrain.lost_games(games, until=10) == [loss]
+
+
+def status(due: bool) -> dict:
+    return dict(since=0, until=3, losses=5.0, games=3, retrain_at=5, due=due)
+
+
+def test_check_exits_by_status(monkeypatch):
+    monkeypatch.setenv("QZ_EXPORT_TOKEN", "x")
+    monkeypatch.setattr(sys, "argv", ["retrain", "--api", "http://x", "--check"])
+    for due, code in ((True, 0), (False, retrain.NOT_DUE)):
+        monkeypatch.setattr(retrain, "retrain_status", lambda api, token: status(due))
+        with pytest.raises(SystemExit) as stop:
+            retrain.main()
+        assert stop.value.code == code
+
+
 def test_retrain_end_to_end(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     run_dir = tmp_path / "runs/t"
     run_dir.mkdir(parents=True)
-    (run_dir / "config.json").write_text(json.dumps({"blocks": 2, "channels": 16}))
+    (run_dir / "config.json").write_text('{"blocks": 2, "channels": 16}')
     save_checkpoint(run_dir / "latest", create_model(num_blocks=2, channels=16))
     games = [played_game(seed) for seed in range(3)]
+    recorded = []
+    monkeypatch.setattr(retrain, "retrain_status", lambda api, token: status(True))
     monkeypatch.setattr(retrain, "fetch", lambda api, token, since: games)
+    monkeypatch.setattr(
+        retrain, "record_retrain", lambda a, t, run: recorded.append(run)
+    )
     monkeypatch.setenv("QZ_EXPORT_TOKEN", "x")
     args = "--run t --api http://x --steps 5 --batch 32 --sims 4 --lanes 4 --games 4"
+    small = "--deep-sims 4 --critical 3"
     # threshold 0: always promote, so export runs too
-    monkeypatch.setattr(sys, "argv", ["retrain", *args.split(), "--threshold", "0"])
+    argv = ["retrain", *args.split(), *small.split(), "--threshold", "0"]
+    monkeypatch.setattr(sys, "argv", argv)
     retrain.main()
     assert (tmp_path / "frontend/model/model.onnx").exists()
     assert "human_" in (run_dir / "best.txt").read_text()
-    assert (
-        json.loads((tmp_path / "data/human/last_fetch.json").read_text())["since"] == 3
-    )
+    # the run is recorded so the count restarts after the newest game it covered
+    assert len(recorded) == 1 and recorded[0]["promoted"] is True
+    assert recorded[0]["games_until"] == 3 and recorded[0]["losses"] == 5.0
+    assert recorded[0]["model_version"].startswith("t/human_")

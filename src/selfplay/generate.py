@@ -1,6 +1,6 @@
 """
 Self-play on the GPU: K games at once in one jit-compiled scan (Gumbel search)
-A finished game is replaced by a fresh one in its lane, so the batch stays full
+A finished game restarts in its lane (from the opening, or a seed position)
 Samples: state, improved policy, outcome. Unfinished games are dropped
 """
 
@@ -39,9 +39,9 @@ def _heuristic(states: State) -> jax.Array:
     return jnp.tanh(advantage / 2)
 
 
-@partial(nnx.jit, static_argnames=("lanes", "steps", "sims"))
-def _play(model, key, lanes: int, steps: int, sims: int):
-    fresh = jax.vmap(lambda _: init())(jnp.arange(lanes))
+@partial(nnx.jit, static_argnames=("steps", "sims"))
+def _play(model, key, fresh: State, steps: int, sims: int):
+    lanes = fresh.to_move.shape[0]
 
     def move(states, key):
         out = run_search(model, states, key, sims, gumbel=True)
@@ -92,10 +92,18 @@ def _play(model, key, lanes: int, steps: int, sims: int):
     return samples, known, stats
 
 
-def selfplay(model, key, lanes: int, steps: int, sims: int):
-    """Play 'steps' moves in each of 'lanes' games -> (Sample on host, stats)."""
+def selfplay(model, key, lanes: int, steps: int, sims: int, seeds: State | None = None):
+    """
+    Play 'steps' moves in each of 'lanes' games -> (Sample on host, stats)
+    seeds: positions to start from instead of the opening, shared out over the lanes
+    """
     model.eval()
-    samples, known, stats = _play(model, key, lanes, steps, sims)
+    if seeds is None:
+        fresh = jax.vmap(lambda _: init())(jnp.arange(lanes))
+    else:
+        lane_seed = jnp.arange(lanes) % seeds.to_move.shape[0]
+        fresh = jax.tree.map(lambda x: x[lane_seed], seeds)
+    samples, known, stats = _play(model, key, fresh, steps, sims)
     keep = np.asarray(known).reshape(-1)
     flat = jax.tree.map(
         lambda x: np.asarray(x).reshape(-1, *x.shape[2:])[keep], samples

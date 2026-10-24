@@ -4,7 +4,9 @@
 //   GET  /games?id=...     one game, for reviewing a challenge claim (Bearer)
 //   GET  /challenge        is the challenge open, and on what terms
 //   POST /challenge        {"open": true|false}: only the owner opens/closes it (Bearer)
-//   POST /claims           {"game_id", "email"}: a challenge win; emails the owner
+//   POST /claims           {"game_id", "email"}: a challenge win, emails the owner
+//   GET  /retrain-status   weighted losses since the last retrain, and whether one is due (Bearer)
+//   POST /retrains         record a retraining run, which restarts the count (Bearer)
 // Only the shape is checked here, the rules are checked offline by replaying
 // every game through the Python engine (src/ingestion/games.py).
 
@@ -16,6 +18,10 @@ const LEVELS = ['easy', 'medium', 'hard', 'challenge'];
 const CHALLENGE = { sims: 800, humanSide: 1, prize: '$20 gift card' };
 const CLAIMS_PER_DAY = 5; // per IP
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
+// A QuoriZero loss counts by level: Hard and challenge 1, Medium ½, Easy 0 (a casual
+// level loses on purpose). Same weights in src/ingestion/retrain.py.
+const LOSS_WEIGHT = "CASE difficulty WHEN 'hard' THEN 1.0 WHEN 'challenge' THEN 1.0 WHEN 'medium' THEN 0.5 ELSE 0 END";
+const RETRAIN_AT = 5; // weighted losses, unless the RETRAIN_AT variable says otherwise
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -64,10 +70,12 @@ async function saveGame(request, env) {
     .first();
   if (recent.n >= GAMES_PER_HOUR) return json({ error: 'rate limited' }, 429);
 
+  // created_at never repeats, so "games after X" cursors can't skip a same-millisecond game
   await env.DB.prepare(
     `INSERT OR IGNORE INTO games (id, created_at, ip_hash, model_version, difficulty, sims,
        human_side, status, winner, moves, move_ms, started_at, ended_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, MAX(?, COALESCE((SELECT MAX(created_at) FROM games), 0) + 1),
+       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       game.game_id, now, ipHash, String(game.model_version ?? '').slice(0, 100), game.difficulty,
@@ -128,6 +136,49 @@ async function setChallenge(request, env) {
     .bind(String(open))
     .run();
   return getChallenge(env);
+}
+
+// Losses since the last retrain: finished games QuoriZero lost with a real model loaded.
+async function retrainStatus(env) {
+  const last = await env.DB.prepare('SELECT MAX(games_until) AS since FROM retrains').first();
+  const since = last?.since ?? 0;
+  const row = await env.DB.prepare(
+    `SELECT COALESCE(SUM(${LOSS_WEIGHT}), 0) AS losses, COUNT(*) AS games, MAX(created_at) AS until
+     FROM games
+     WHERE created_at > ? AND status = 'completed' AND winner = human_side
+       AND model_version != 'heuristic' AND ${LOSS_WEIGHT} > 0`,
+  )
+    .bind(since)
+    .first();
+  const retrainAt = Number(env.RETRAIN_AT) || RETRAIN_AT;
+  return {
+    since, until: row.until ?? since, losses: row.losses, games: row.games,
+    retrain_at: retrainAt, due: row.losses >= retrainAt,
+  };
+}
+
+async function getRetrainStatus(request, env) {
+  if (!isOwner(request, env)) return json({ error: 'unauthorized' }, 401);
+  return json(await retrainStatus(env));
+}
+
+async function recordRetrain(request, env) {
+  if (!isOwner(request, env)) return json({ error: 'unauthorized' }, 401);
+  let run;
+  try {
+    run = JSON.parse(await request.text());
+  } catch {}
+  const ok =
+    isInt(run?.games_until, 0, Number.MAX_SAFE_INTEGER) && typeof run.losses === 'number' && run.losses >= 0 &&
+    typeof run.promoted === 'boolean' && (run.gate_score == null || typeof run.gate_score === 'number') &&
+    (run.model_version == null || (typeof run.model_version === 'string' && run.model_version.length <= 100));
+  if (!ok) return json({ error: 'send {games_until, losses, promoted, gate_score?, model_version?}' }, 400);
+  await env.DB.prepare(
+    'INSERT INTO retrains (created_at, games_until, losses, promoted, gate_score, model_version) VALUES (?, ?, ?, ?, ?, ?)',
+  )
+    .bind(Date.now(), run.games_until, run.losses, run.promoted ? 1 : 0, run.gate_score ?? null, run.model_version ?? null)
+    .run();
+  return json(await retrainStatus(env));
 }
 
 async function claimPrize(request, env, ctx) {
@@ -197,6 +248,8 @@ export default {
     if (route === 'GET /challenge') return getChallenge(env);
     if (route === 'POST /challenge') return setChallenge(request, env);
     if (route === 'POST /claims') return claimPrize(request, env, ctx);
+    if (route === 'GET /retrain-status') return getRetrainStatus(request, env);
+    if (route === 'POST /retrains') return recordRetrain(request, env);
     return json({ error: 'not found' }, 404);
   },
 };

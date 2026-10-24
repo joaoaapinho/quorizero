@@ -1,7 +1,7 @@
 -- One row per game played on the website. Moves are engine action indices (0..139).
 CREATE TABLE IF NOT EXISTS games (
   id TEXT PRIMARY KEY,           -- generated in the browser: re-sends are ignored
-  created_at INTEGER NOT NULL,   -- server time, epoch ms (export cursor)
+  created_at INTEGER NOT NULL,   -- server time, epoch ms, never repeats (cursor)
   ip_hash TEXT NOT NULL,         -- salted hash, only for rate limiting
   model_version TEXT,
   difficulty TEXT,               -- easy | medium | hard | challenge
@@ -32,3 +32,15 @@ CREATE TABLE IF NOT EXISTS claims (
 );
 CREATE INDEX IF NOT EXISTS claims_by_ip ON claims (ip_hash, created_at);
 CREATE INDEX IF NOT EXISTS games_by_ip ON games (ip_hash, created_at);
+
+-- One row per retraining run, promoted or not. Losses are counted from the newest
+-- games_until onwards, so recording a run restarts the count (GET /retrain-status).
+CREATE TABLE IF NOT EXISTS retrains (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at INTEGER NOT NULL,     -- server time, epoch ms
+  games_until INTEGER NOT NULL,    -- created_at of the newest game this run covered
+  losses REAL NOT NULL,            -- weighted losses that triggered it
+  promoted INTEGER NOT NULL,       -- 1 if the new model passed the gate
+  gate_score REAL,
+  model_version TEXT               -- the promoted model, if any
+);
