@@ -15,6 +15,8 @@ from engine.state import GameState, initial_state
 
 MIN_PLIES = 10  # shorter games are resignations or noise
 PAGE = 1000  # games are downloaded in pages of x
+# Cloudflare refuses Python's default agent (error 1010), so name ours
+USER_AGENT = "quorizero-retrain/1.0"
 
 
 def _call(api_url: str, token: str, path: str, body: dict | None = None) -> dict:
@@ -22,7 +24,7 @@ def _call(api_url: str, token: str, path: str, body: dict | None = None) -> dict
     request = urllib.request.Request(
         f"{api_url.rstrip('/')}{path}",
         data=None if body is None else json.dumps(body).encode(),
-        headers={"Authorization": f"Bearer {token}"},
+        headers={"Authorization": f"Bearer {token}", "User-Agent": USER_AGENT},
     )
     with urllib.request.urlopen(request) as response:
         return json.load(response)

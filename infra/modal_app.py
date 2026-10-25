@@ -54,7 +54,10 @@ def check() -> None:
     """Daily, on CPU: start the GPU retrain only when one is due."""
     request = urllib.request.Request(
         f"{API}/retrain-status",
-        headers={"Authorization": f"Bearer {os.environ['QZ_EXPORT_TOKEN']}"},
+        headers={  # a named agent: Cloudflare refuses Python's default (error 1010)
+            "Authorization": f"Bearer {os.environ['QZ_EXPORT_TOKEN']}",
+            "User-Agent": "quorizero-retrain/1.0",
+        },
     )
     with urllib.request.urlopen(request) as response:
         status = json.load(response)
