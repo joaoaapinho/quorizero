@@ -31,9 +31,9 @@ ml = [
     "onnx==1.23.2",
     "onnxruntime==1.31.0",
 ]
-# The retraining job on Google Cloud (scripts/sync_run.py)
-cloud = [
-    "google-cloud-storage==2.19.0",
+# Deploying retraining to Modal (infra/modal_app.py, scripts/deploy_page.sh)
+deploy = [
+    "modal>=1,<2",
 ]
 
 [tool.black]
