@@ -16,7 +16,7 @@ const GAMES_PER_HOUR = 60; // per IP
 const STATUSES = ['completed', 'resigned', 'abandoned'];
 const LEVELS = ['easy', 'medium', 'hard', 'challenge'];
 // The challenge's terms live here, so no browser can claim a win on easier ones.
-const CHALLENGE = { sims: 800, humanSide: 1, prize: '$20 gift card' };
+const CHALLENGE = { sims: 800, humanSide: 1, prize: '$15 gift card' };
 const CLAIMS_PER_DAY = 5; // per IP
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 // A QuoriZero loss counts by level: Hard and challenge 1, Medium ½, Easy 0 (a casual
