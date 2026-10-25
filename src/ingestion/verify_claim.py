@@ -85,7 +85,27 @@ def main() -> None:
         f"game {record['id']}: {record['difficulty']}, {record['sims']} sims, "
         f"model {record['model_version']}, {len(record['moves'])} moves"
     )
-    model = load_model(Path(args.runs) / record["model_version"])
+    # rules first: an illegal game needs no model to be rejected
+    if replay(record) is None:
+        print(
+            "\nREJECT: the game does not replay legally or did not finish as claimed."
+        )
+        return
+    version = record["model_version"]
+    run, _, checkpoint = version.partition("/")
+    if not run or not checkpoint:
+        print(f"\nREJECT: '{version}' is not a QuoriZero model, no real model played.")
+        return
+    path = Path(args.runs) / version
+    if not path.exists() or not (path.parent / "config.json").exists():
+        print(
+            f"\nNeed the model {version} to re-run the bot. Retrained models live on "
+            f"Modal:\n  modal volume get quorizero-runs {version} {args.runs}/{run}/\n"
+            f"  modal volume get quorizero-runs {run}/config.json "
+            f"{args.runs}/{run}/config.json\nthen run this again."
+        )
+        return
+    model = load_model(path)
     result = review(record, model, record["sims"], not args.skip_player)
 
     print()

@@ -6,13 +6,13 @@
   <title>Quoridor · joaoapinho</title>
   <meta name="description" content="Play Quoridor against QuoriZero, a bot that taught itself the game through self-play.">
   <script>
-    // Pick the look before the first paint: a saved choice, else dark + classic board.
+    // Pick the look before the first paint: a saved choice, else dark + modern board.
     try {
       document.documentElement.dataset.theme = localStorage.getItem('qz-theme') || 'dark';
-      document.documentElement.dataset.board = localStorage.getItem('qz-board') || 'classic';
+      document.documentElement.dataset.board = localStorage.getItem('qz-board') || 'modern';
     } catch {
       document.documentElement.dataset.theme = 'dark';
-      document.documentElement.dataset.board = 'classic';
+      document.documentElement.dataset.board = 'modern';
     }
   </script>
   <link rel="stylesheet" href="style.css">
