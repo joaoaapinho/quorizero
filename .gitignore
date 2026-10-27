@@ -50,6 +50,5 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
-Yi
 # Cloudflare wrangler cache (account id, local D1, build temp)
 .wrangler/
