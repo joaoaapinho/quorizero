@@ -396,11 +396,19 @@ $('claim').addEventListener('submit', async (e) => {
     unsent();
   }
 });
+// the button cycles the boards, and is lit on any but the modern one
+const BOARDS = ['modern', 'classic', 'maple'];
+const BOARD_NAMES = { modern: 'Modern', classic: 'Classic wooden', maple: 'Maple' };
 function showBoardStyle() {
-  $('board-style').setAttribute('aria-pressed', String(document.documentElement.dataset.board === 'classic'));
+  const board = document.documentElement.dataset.board;
+  const next = BOARDS[(BOARDS.indexOf(board) + 1) % BOARDS.length];
+  const button = $('board-style');
+  button.setAttribute('aria-pressed', String(board !== 'modern'));
+  button.setAttribute('aria-label', `${BOARD_NAMES[next]} board`);
+  button.title = `Board: ${BOARD_NAMES[board] ?? board} (next: ${BOARD_NAMES[next]})`;
 }
 $('board-style').addEventListener('click', () => {
-  const board = document.documentElement.dataset.board === 'classic' ? 'modern' : 'classic';
+  const board = BOARDS[(BOARDS.indexOf(document.documentElement.dataset.board) + 1) % BOARDS.length];
   document.documentElement.dataset.board = board;
   try { localStorage.setItem('qz-board', board); } catch {}
   showBoardStyle();

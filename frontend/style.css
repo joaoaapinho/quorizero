@@ -1,6 +1,7 @@
 /* Light: joaoapinho.dev. Dark: the site's terminal (GitHub-dark greys).
    Players: ultramarine vs light wood. The page accent (challenge, slider) is the same
-   colour dimmed: blue, or red on the classic board (the wooden Gigamic set). */
+   colour dimmed: blue, or red on the classic board (the wooden Gigamic set), or amber
+   on the maple board. */
 :root {
   --bg: #ffffff;
   --fg: #0a0a0a;
@@ -31,8 +32,8 @@
   --p2-text: #8f6a30;
   --p2-soft: rgb(234 214 166 / 0.2);
   --p2-edge: rgb(234 214 166 / 0.6);
-  --wall-p1: var(--p1);
-  --wall-p2: var(--p2);
+  --wall-p1: #4b5563; /* slate: walls apart from both players */
+  --wall-p2: #4b5563;
   --wall-edge: none;
   color-scheme: light;
 }
@@ -59,6 +60,8 @@
   --accent-soft: rgb(79 107 245 / 0.16);
   --accent-edge: rgb(79 107 245 / 0.5);
   --p2-text: #e6cf98;
+  --wall-p1: #9da7b3;
+  --wall-p2: #9da7b3;
   color-scheme: dark;
 }
 
@@ -86,6 +89,39 @@
   --accent-edge: rgb(214 80 70 / 0.45);
   --p2-text: #e6cf98;
 }
+
+/* Maple: tan board with light grooves, dark brown vs cream, amber walls. P1 doesn't
+   follow the accent here: brown would vanish on the dark page, so the accent is the amber */
+:root[data-board="maple"] {
+  --board: #f5d9a8;
+  --cell: #e6b36f;
+  --accent: #d4843a;
+  --accent-text: #a8611f;
+  --accent-soft: rgb(212 132 58 / 0.08);
+  --accent-edge: rgb(212 132 58 / 0.35);
+  --p1: #3d2418;
+  --p1-text: #5b3620;
+  --p1-soft: rgb(61 36 24 / 0.1);
+  --p1-edge: rgb(61 36 24 / 0.45);
+  --p2: #f7f0e3;
+  --p2-text: #8f6a30;
+  --p2-soft: rgb(255 250 240 / 0.35);
+  --p2-edge: rgb(255 250 240 / 0.85);
+  --wall-p1: #d4843a;
+  --wall-p2: #d4843a;
+  --wall-edge: #a9621f;
+}
+:root[data-theme="dark"][data-board="maple"] {
+  --accent-text: #e9a25c;
+  --accent-soft: rgb(212 132 58 / 0.14);
+  --accent-edge: rgb(212 132 58 / 0.45);
+  --p1-text: #c99872;
+  --p2-text: #e6cf98;
+}
+:root[data-board="maple"] input[type="range"] { accent-color: var(--p1); }
+/* edges for what would vanish on the page: brown on dark, cream on white */
+:root[data-theme="dark"][data-board="maple"] .dot.p1 { box-shadow: 0 0 0 1px #8a5a3c; }
+:root:not([data-theme="dark"])[data-board="maple"] :is(.dot.p2, .odds-bar) { box-shadow: inset 0 0 0 1px #e3d3b4; }
 
 * { box-sizing: border-box; }
 
