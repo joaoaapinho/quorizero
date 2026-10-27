@@ -71,12 +71,11 @@ which hands the network the quantity Quoridor is about instead of making it deri
 
 <p align="center"><img src="docs/actions.png" alt="The action space" width="90%"></p>
 
-```math
-a \in \{0, \dots, 139\}: \qquad
-\underbrace{0\text{-}11}_{\text{pawn: index of } (\Delta r, \Delta c)} \;\Big|\;
-\underbrace{12 + 8r + c}_{\text{horizontal wall at slot } (r,c)} \;\Big|\;
-\underbrace{76 + 8r + c}_{\text{vertical wall at slot } (r,c)}
-```
+| Action index $a$ (0 to 139) | Meaning |
+|---|---|
+| $0$ to $11$ | pawn move, by direction $(\Delta r, \Delta c)$ |
+| $12 + 8r + c$ | horizontal wall at slot $(r, c)$ |
+| $76 + 8r + c$ | vertical wall at slot $(r, c)$ |
 
 Pawn moves are encoded as directions rather than destination squares, so each index represents the same move regardless of the pawn's position. Straight and diagonal jumps get their own indices instead of reusing a step, so a policy target never mixes a step with a jump. The board is flipped for player 0 to align with the mover's perspective, and the policy is permuted accordingly. A wall is legal if its slot is free, it neither crosses nor overlaps another wall, and both pawns keep a path to their goal. These conditions are verified through 128 path checks per position, using bitboard flood fills with one `uint32` per row.
 
@@ -87,8 +86,10 @@ Pawn moves are encoded as directions rather than destination squares, so each in
 **Play (website, evaluation): PUCT** (predictor upper confidence bound applied to trees), as in AlphaZero. Each simulation walks down the tree, at every node taking the move with the highest
 
 ```math
-\underbrace{\bar{Q}(a)}_{\text{what search found}} \;+\; \underbrace{c \cdot P(a)\,\frac{\sqrt{N}}{1 + N(a)}}_{\text{curiosity } U}
+\bar{Q}(a) \;+\; c \cdot P(a)\,\frac{\sqrt{N}}{1 + N(a)}
 ```
+
+The first term is what search found, the second a curiosity bonus $U$:
 
 - $\bar{Q}(a)$: the average result of the simulations through move $a$, rescaled to $[0, 1]$ among the node's moves.
 - $P(a)$: the network's prior, how likely it thinks $a$ is the best move.
@@ -100,7 +101,7 @@ With no root noise, it then plays the most-visited move. The browser runs the sa
 **Self-play: Gumbel AlphaZero** (Danihelka et al., 2022). It draws 16 candidate moves at the root, the network's favourites plus a little Gumbel noise so others sometimes get in, and splits only **32 simulations** among them by sequential halving: try them all, drop the worse half, repeat. It trains towards the improved policy
 
 ```math
-\pi' = \operatorname{softmax}\big(\text{logits} + \sigma(\hat{q})\big), \qquad
+\pi' = \mathrm{softmax}\big(\text{logits} + \sigma(\hat{q})\big), \qquad
 \sigma(\hat{q}) = 0.1 \cdot \big(50 + \max_b N(b)\big) \cdot \hat{q}
 ```
 
@@ -116,10 +117,12 @@ In short, the new opinion is the old one corrected by what search found. PUCT ne
 Every position $s$ of a finished game becomes a training example with three answers to learn, one per head:
 
 ```math
-\mathcal{L} \;=\; \underbrace{-\sum_a \pi'(a) \log p(a \mid s)}_{\text{policy: pick the moves search picked}}
-\;+\; \underbrace{\big(v(s) - \tilde{z}\big)^2}_{\text{value: predict who wins}}
-\;+\; \underbrace{0.1\,\big(m(s) - \tfrac{\mu}{10}\big)^2}_{\text{margin: predict by how much}}
+\mathcal{L} \;=\; -\sum_a \pi'(a) \log p(a \mid s)
+\;+\; \big(v(s) - \tilde{z}\big)^2
+\;+\; 0.1\,\big(m(s) - \tfrac{\mu}{10}\big)^2
 ```
+
+The three terms train the three heads: the policy to pick the moves search picked, the value to predict who wins, and the margin to predict by how much.
 
 - $p(a \mid s)$, $v(s)$, $m(s)$: the network's three outputs, move probabilities, value in $[-1, 1]$ and margin.
 - $\pi'$: the improved policy from the search above.
